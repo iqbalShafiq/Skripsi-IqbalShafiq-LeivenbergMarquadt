@@ -22,7 +22,6 @@ object Matrix {
 
                 data.add(record)
             }
-            println(data)
         }
 
         return data
