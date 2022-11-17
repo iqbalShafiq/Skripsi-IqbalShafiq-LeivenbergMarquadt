@@ -1,7 +1,6 @@
 package utils
 
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
-import com.google.gson.JsonObject
 
 object Matrix {
 
@@ -28,23 +27,22 @@ object Matrix {
     }
 
     /**
-     * Mengembalikan nilai mengembalikan dalam bentuk array of double
-     * @param csvList = list of json object yang berisi data input data csv
-     * @return matrix m x n
+     * Mencari matrix identitas sesuai dimensi
+     * @param dimension = jumlah dimensi dari matrix
+     * @return matrix m x m
      */
-    suspend fun getMatrix(csvList: List<JsonObject>): List<JsonObject> {
-        val data = mutableListOf<JsonObject>()
+    fun getMatrixIdentity(dimension: Int): List<List<Int>> {
+        val data = mutableListOf<List<Int>>()
 
-        csvReader().openAsync("src/hmnist_28_28_L.csv") {
-            readAllWithHeaderAsSequence().forEach {
-                //Do something
-                val jsonObject = JsonObject()
-                it.keys.forEach { key ->
-                    jsonObject.addProperty(key, it[key])
-                }
-                data.add(jsonObject)
+        for (i in 0..dimension) {
+            val record = mutableListOf<Int>()
+
+            for (j in 0..dimension) {
+                if (i == j) record.add(1)
+                else record.add(0)
             }
-            println(data)
+
+            data.add(record)
         }
 
         return data
@@ -54,8 +52,17 @@ object Matrix {
      * Memberikan output dari array ke layar pengguna
      * @param matrix = array m x n dengan tipe data double
      */
-    fun printMatrix(matrix: Array<Double>) {
+    fun printMatrix(matrix: List<List<Double>>) {
+        matrix.forEach { record ->
+            print("|")
 
+            record.forEachIndexed { index, recordData ->
+                if (index != record.size - 1) print("$recordData ")
+                else print(recordData)
+            }
+
+            println("|")
+        }
     }
 
     /**
@@ -79,20 +86,24 @@ object Matrix {
     }
 
     /**
-     * Mengembalikan matriks identitas dalam bentuk array n x n dengan tipe data double
-     * @param n = dimensi matriks dengan tipe data integer
-     * @return matriks identitas
-     */
-    fun calculateMatrixIdentity(n: Int): Array<Double> {
-        return arrayOf()
-    }
-
-    /**
      * Melakukan operasi transpose dari @param matrix
      * @param matrix = array m x n dengan tipe data double
      */
-    fun transposeMatrix(matrix: Array<Double>): Array<Double> {
-        return arrayOf()
+    fun transposeMatrix(matrix: List<List<Double>>): List<List<Double>> {
+        val rowMatrix = matrix.size
+        val columnMatrix = matrix.first().size
+
+        val transposedMatrix = mutableListOf<List<Double>>()
+        for (i in 0 until columnMatrix) {
+            val recordTransposedMatrix = mutableListOf<Double>()
+            for (j in 0 until rowMatrix) {
+                recordTransposedMatrix.add(matrix[j][i])
+            }
+
+            transposedMatrix.add(recordTransposedMatrix)
+        }
+
+        return transposedMatrix
     }
 
     /**

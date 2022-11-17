@@ -5,7 +5,7 @@ object ErrorValue {
 
     }
 
-    fun calculateSumSquaredError() {
+    fun calculateMeanSquaredError() {
 
     }
 }
