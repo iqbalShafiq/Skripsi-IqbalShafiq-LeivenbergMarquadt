@@ -87,13 +87,34 @@ object Matrix {
     }
 
     /**
-     * Melakukan operasi perkalian dua buah matriks
+     * Melakukan operasi perkalian dua buah matriks persegi
      * @param matrixA = array m x m dengan tipe data double
      * @param matrixB = array m x m dengan tipe data double
      * @return hasil perkalian dari matrixA dan matrixB
      */
-    fun timesSquareMatrix(matrixA: Array<Double>, matrixB: Array<Double>): Array<Double> {
-        return arrayOf()
+    fun timesSquareMatrix(
+        matrixA: List<List<Double>>,
+        matrixB: List<List<Double>>
+    ): List<List<Double>> {
+        val matrixResult = mutableListOf<List<Double>>()
+        val rowSize = matrixA.size
+        val columnSize = matrixA.first().size
+
+        for (row in 0 until rowSize) {
+            val rowMatrixResult = mutableListOf<Double>()
+
+            for (column in 0 until columnSize) {
+                var sum = 0.0
+                for (timesColumn in 0 until columnSize) {
+                    sum += (matrixA[row][timesColumn] * matrixB[timesColumn][column])
+                }
+
+                rowMatrixResult.add(sum)
+            }
+            matrixResult.add(rowMatrixResult)
+        }
+
+        return matrixResult
     }
 
     /**
