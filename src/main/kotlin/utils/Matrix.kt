@@ -27,28 +27,6 @@ object Matrix {
     }
 
     /**
-     * Mencari matrix identitas sesuai dimensi
-     * @param dimension = jumlah dimensi dari matrix
-     * @return matrix m x m
-     */
-    fun getMatrixIdentity(dimension: Int): List<List<Int>> {
-        val data = mutableListOf<List<Int>>()
-
-        for (i in 0..dimension) {
-            val record = mutableListOf<Int>()
-
-            for (j in 0..dimension) {
-                if (i == j) record.add(1)
-                else record.add(0)
-            }
-
-            data.add(record)
-        }
-
-        return data
-    }
-
-    /**
      * Memberikan output dari array ke layar pengguna
      * @param matrix = array m x n dengan tipe data double
      */
@@ -66,12 +44,65 @@ object Matrix {
     }
 
     /**
-     * Melakukan operasi perkalian dua buah matriks
+     * Mencari matrix identitas sesuai dimensi
+     * @param dimension = jumlah dimensi dari matrix
+     * @return matrix m x m
+     */
+    fun calculateMatrixIdentity(dimension: Int): List<List<Int>> {
+        val data = mutableListOf<List<Int>>()
+
+        for (i in 0..dimension) {
+            val record = mutableListOf<Int>()
+
+            for (j in 0..dimension) {
+                if (i == j) record.add(1)
+                else record.add(0)
+            }
+
+            data.add(record)
+        }
+
+        return data
+    }
+
+    /**
+     * Melakukan operasi perkalian konstanta dan matriks
+     * @param constants = konstanta dengan tipe data double
      * @param matrixA = array m x n dengan tipe data double
-     * @param matrixB = array m x n dengan tipe data double
+     * @return hasil perkalian dari constanta dan matrixA
+     */
+    fun timesConstWithMatrix(constants: Double, matrixA: List<List<Double>>): List<List<Double>> {
+        val matrixResult = mutableListOf<List<Double>>()
+
+        matrixA.forEach { row ->
+            val rowMatrixResult = mutableListOf<Double>()
+            row.forEach { value ->
+                rowMatrixResult.add(constants * value)
+            }
+
+            matrixResult.add(rowMatrixResult)
+        }
+
+        return matrixResult
+    }
+
+    /**
+     * Melakukan operasi perkalian dua buah matriks
+     * @param matrixA = array m x m dengan tipe data double
+     * @param matrixB = array m x m dengan tipe data double
      * @return hasil perkalian dari matrixA dan matrixB
      */
-    fun timesTwoMatrix(matrixA: Array<Double>, matrixB: Array<Double>): Array<Double> {
+    fun timesSquareMatrix(matrixA: Array<Double>, matrixB: Array<Double>): Array<Double> {
+        return arrayOf()
+    }
+
+    /**
+     * Melakukan operasi perkalian dua buah matriks
+     * @param matrixA = array k x l dengan tipe data double
+     * @param matrixB = array l x m dengan tipe data double
+     * @return hasil perkalian dari matrixA dan matrixB
+     */
+    fun timesNonSquareMatrix(matrixA: Array<Double>, matrixB: Array<Double>): Array<Double> {
         return arrayOf()
     }
 
@@ -95,12 +126,12 @@ object Matrix {
 
         val transposedMatrix = mutableListOf<List<Double>>()
         for (i in 0 until columnMatrix) {
-            val recordTransposedMatrix = mutableListOf<Double>()
+            val rowTransposedMatrix = mutableListOf<Double>()
             for (j in 0 until rowMatrix) {
-                recordTransposedMatrix.add(matrix[j][i])
+                rowTransposedMatrix.add(matrix[j][i])
             }
 
-            transposedMatrix.add(recordTransposedMatrix)
+            transposedMatrix.add(rowTransposedMatrix)
         }
 
         return transposedMatrix
