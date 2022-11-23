@@ -123,8 +123,11 @@ object Matrix {
      * @param matrixB = array l x m dengan tipe data double
      * @return hasil perkalian dari matrixA dan matrixB
      */
-    fun timesNonSquareMatrix(matrixA: Array<Double>, matrixB: Array<Double>): Array<Double> {
-        return arrayOf()
+    fun timesNonSquareMatrix(
+        matrixA: List<List<Double>>,
+        matrixB: List<List<Double>>
+    ): List<List<Double>> {
+        return listOf()
     }
 
     /**
@@ -133,8 +136,11 @@ object Matrix {
      * @param matrixB = array m x n dengan tipe data double
      * @return hasil penjumlahan dari matrixA dan matrixB
      */
-    fun sumTwoMatrix(matrixA: Array<Double>, matrixB: Array<Double>): Array<Double> {
-        return arrayOf()
+    fun sumTwoMatrix(
+        matrixA: List<List<Double>>,
+        matrixB: List<List<Double>>
+    ): List<List<Double>> {
+        return mutableListOf()
     }
 
     /**
@@ -169,13 +175,29 @@ object Matrix {
     }
 
     /**
-     * Menghitung matriks hessian dengan formula:
-     * @return matrixH = (transposeMatrix(matrixJ) * matrixJ) + (miu * I)
+     * Menghitung matriks hessian
+     * @param jacobianMatrix = matriks jacobian m x n dengan tipe data double
+     * @return matrixH = transposeMatrix(jacobianMatrix) * jacobianMatrix
      */
-    fun createHessianMatrix(): Array<Double> {
-        val matrixH = arrayOf<Double>()
+    fun createHessianMatrix(jacobianMatrix: List<List<Double>>): List<List<Double>> {
+        val transposedJacobian = transposeMatrix(jacobianMatrix)
 
-        return matrixH
+        return timesNonSquareMatrix(transposedJacobian, jacobianMatrix)
+    }
+
+    /**
+     * Menghitung matriks gradient
+     * @param jacobianMatrix = matriks jacobian m x n dengan tipe data double
+     * @param outputError = vektor pada output jaringan untuk menyatakan setiap error
+     * @return matrixG = transposeMatrix(jacobianMatrix) * outputError
+     */
+    fun createGradientMatrix(
+        jacobianMatrix: List<List<Double>>,
+        outputError: List<List<Double>>
+    ): List<List<Double>> {
+        val transposedJacobian = transposeMatrix(jacobianMatrix)
+
+        return timesNonSquareMatrix(transposedJacobian, outputError)
     }
 
 }
