@@ -1,6 +1,7 @@
 package utils
 
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import java.io.IOException
 
 object Matrix {
 
@@ -105,6 +106,7 @@ object Matrix {
 
             for (column in 0 until columnSize) {
                 var sum = 0.0
+
                 for (timesColumn in 0 until columnSize) {
                     sum += (matrixA[row][timesColumn] * matrixB[timesColumn][column])
                 }
@@ -127,7 +129,34 @@ object Matrix {
         matrixA: List<List<Double>>,
         matrixB: List<List<Double>>
     ): List<List<Double>> {
-        return listOf()
+        val rowMatrixASize = matrixA.size
+        val columnMatrixASize = matrixA.first().size
+        val rowMatrixBSize = matrixB.size
+        val columnMatrixBSize = matrixB.first().size
+
+        // check dimensions of two matrix
+        if (columnMatrixASize != rowMatrixBSize) throw IOException()
+
+        // continue if the dimensions is valid
+        val resultMatrix = mutableListOf<List<Double>>()
+
+        for (row in 0 until rowMatrixASize) {
+            val rowMatrixResult = mutableListOf<Double>()
+
+            for (columnB in 0 until columnMatrixBSize) {
+                var sum = 0.0
+
+                for (column in 0 until columnMatrixASize) {
+                    sum += (matrixA[row][column] * matrixB[column][columnB])
+                }
+
+                rowMatrixResult.add(sum)
+            }
+
+            resultMatrix.add(rowMatrixResult)
+        }
+
+        return resultMatrix
     }
 
     /**

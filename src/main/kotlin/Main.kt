@@ -5,16 +5,14 @@ import utils.Matrix
 suspend fun main() {
 //    FeedForward().doFeedForward()
     Matrix.printMatrix(
-        Matrix.timesSquareMatrix(
+        Matrix.timesNonSquareMatrix(
             listOf(
-                listOf(1.0, 2.0, 3.0),
-                listOf(4.0, 5.0, 6.0),
-                listOf(7.0, 8.0, 9.0)
+                listOf(1.0, -7.0),
+                listOf(5.0, 9.0)
             ),
             listOf(
-                listOf(9.0, 8.0, 7.0),
-                listOf(6.0, 5.0, 4.0),
-                listOf(3.0, 2.0, 1.0)
+                listOf(5.0, -3.0, 8.0),
+                listOf(0.0, 2.0, -1.0)
             )
         )
     )
