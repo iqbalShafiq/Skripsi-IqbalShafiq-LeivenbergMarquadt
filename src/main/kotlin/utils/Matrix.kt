@@ -53,15 +53,15 @@ object Matrix {
      * @param dimension = jumlah dimensi dari matrix
      * @return matrix m x m
      */
-    fun calculateMatrixIdentity(dimension: Int): List<List<Int>> {
-        val data = mutableListOf<List<Int>>()
+    fun calculateMatrixIdentity(dimension: Int): List<List<Double>> {
+        val data = mutableListOf<List<Double>>()
 
         for (i in 0..dimension) {
-            val record = mutableListOf<Int>()
+            val record = mutableListOf<Double>()
 
             for (j in 0..dimension) {
-                if (i == j) record.add(1)
-                else record.add(0)
+                if (i == j) record.add(1.0)
+                else record.add(0.0)
             }
 
             data.add(record)
@@ -164,6 +164,38 @@ object Matrix {
     }
 
     /**
+     * Melakukan operasi perkalian dua buah matriks
+     * @param matrixA = matriks m x n dengan tipe data double
+     * @param matrixB = matriks n x 1 dengan tipe data double
+     * @return hasil perkalian dari matrixA dan matrixB
+     */
+    fun timesMatrixWithColumnMatrix(
+        matrixA: List<List<Double>>,
+        matrixB: List<Double>
+    ): List<Double> {
+        val rowMatrixASize = matrixA.size
+        val columnMatrixASize = matrixA.first().size
+        val rowMatrixBSize = matrixB.size
+
+        // check dimensions of two matrix
+        if (columnMatrixASize != rowMatrixBSize) throw IOException()
+
+        // continue if the dimensions is valid
+        val resultMatrix = mutableListOf<Double>()
+
+        for (row in 0 until rowMatrixASize) {
+            var sum = 0.0
+
+            for (column in 0 until columnMatrixASize) {
+                sum += (matrixA[row][column] * matrixB[row])
+                resultMatrix.add(sum)
+            }
+        }
+
+        return resultMatrix
+    }
+
+    /**
      * Melakukan operasi penjumlahan dua buah matriks
      * @param matrixA = array m x n dengan tipe data double
      * @param matrixB = array m x n dengan tipe data double
@@ -195,16 +227,6 @@ object Matrix {
         }
 
         return transposedMatrix
-    }
-
-    /**
-     * Menghitung matriks jacobian untuk perhitungan matriks Hessian
-     * @return matrixJ = array m x n tipe data array
-     */
-    fun calculateMatrixJacobian(): Array<Double> {
-        val matrixJ = arrayOf<Double>()
-
-        return matrixJ
     }
 
     /**

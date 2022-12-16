@@ -1,12 +1,13 @@
 package mpl
 
 import utils.ActivationFunction
+import utils.ErrorValue
 import utils.Matrix
 import kotlin.random.Random
 
 class FeedForward {
 
-    suspend fun doFeedForward() {
+    suspend fun startFeedForward() {
         val inputLayer = normalize()
 
         val hiddenLayer = calculateNextLayer(
@@ -127,6 +128,24 @@ class FeedForward {
         }
 
         return nextLayer
+    }
+
+    fun getListOutputError(
+        targetList: List<Double>,
+        outputLayer: List<Double>
+    ): List<Double> {
+        val errorList = mutableListOf<Double>()
+
+        outputLayer.forEachIndexed { index, output ->
+            errorList.add(
+                ErrorValue.calculateOutputLayerError(
+                    targetList[index],
+                    output
+                )
+            )
+        }
+
+        return errorList
     }
 
     companion object {
