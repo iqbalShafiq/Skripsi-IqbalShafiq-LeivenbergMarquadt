@@ -1,6 +1,10 @@
 package utils
 
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import org.jetbrains.kotlinx.multik.api.linalg.inv
+import org.jetbrains.kotlinx.multik.api.mk
+import org.jetbrains.kotlinx.multik.api.ndarray
+import org.jetbrains.kotlinx.multik.ndarray.operations.toListD2
 import java.io.IOException
 
 object Matrix {
@@ -215,18 +219,32 @@ object Matrix {
     }
 
     /**
-     * Menghitung matriks gradient
+     * Menghitung matriks hessian
+     * @param hessianMatrix = matriks hessian m x m dengan tipe data double
      * @param jacobianMatrix = matriks jacobian m x n dengan tipe data double
-     * @param outputError = vektor pada output jaringan untuk menyatakan setiap error
-     * @return matrixG = transposeMatrix(jacobianMatrix) * outputError
+     * @param identityMatrix = matriks identitas m x m dengan tipe data double
+     * @param miu = konstanta dengan tipe data double
+     * @return pseudoInverse = inverse(J * transpose(J) + miu * I) * transpose(J)
      */
-    fun createGradientMatrix(
+    fun calculatePseudoInverse(
+        hessianMatrix: List<List<Double>>,
         jacobianMatrix: List<List<Double>>,
-        outputError: List<List<Double>>
+        identityMatrix: List<List<Double>>,
+        miu: Double,
     ): List<List<Double>> {
-        val transposedJacobian = transposeMatrix(jacobianMatrix)
+        val sumMatrix = mk.ndarray(
+            sumTwoMatrix(
+                hessianMatrix,
+                timesConstWithMatrix(miu, identityMatrix)
+            )
+        )
 
-        return timesNonSquareMatrix(transposedJacobian, outputError)
+        val inverseMatrix = mk.linalg.inv(sumMatrix).toListD2()
+
+        return timesNonSquareMatrix(
+            inverseMatrix,
+            transposeMatrix(jacobianMatrix)
+        )
     }
 
 }

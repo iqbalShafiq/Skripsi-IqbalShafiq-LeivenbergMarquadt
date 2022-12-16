@@ -16,6 +16,10 @@ dependencies {
     testImplementation(kotlin("test"))
     implementation(kotlin("reflect"))
 
+    // multik
+    implementation("org.jetbrains.kotlinx:multik-core:0.2.1")
+    implementation("org.jetbrains.kotlinx:multik-default:0.2.1")
+
     //doyaaaaaken's kotlin-csv
     implementation("com.github.doyaaaaaken:kotlin-csv-jvm:1.6.0")
 

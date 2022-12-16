@@ -120,7 +120,7 @@ class FeedForward {
                 }
 
                 net += biases[weightRecordIndex]
-                newRecord.add(ActivationFunction.calculateActivationFunction(net))
+                newRecord.add(ActivationFunction.calculateSigmoidFunction(net))
             }
 
             nextLayer.add(newRecord)
