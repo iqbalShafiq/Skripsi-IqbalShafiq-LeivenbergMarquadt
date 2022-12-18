@@ -13,15 +13,15 @@ object Matrix {
      * Membaca data dari file csv
      * @return matrix m x n
      */
-    suspend fun readCsvFile(): List<List<Int>> {
-        val data = mutableListOf<MutableList<Int>>()
+    suspend fun readCsvFile(): List<List<Double>> {
+        val data = mutableListOf<MutableList<Double>>()
 
         csvReader().openAsync("src/data.csv") {
             readAllWithHeaderAsSequence().forEach {
                 // add data to record
-                val record = mutableListOf<Int>()
+                val record = mutableListOf<Double>()
                 it.values.forEach { value ->
-                    record.add(value.toInt())
+                    record.add(value.toDouble())
                 }
 
                 data.add(record)

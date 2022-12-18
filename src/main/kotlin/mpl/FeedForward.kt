@@ -1,5 +1,6 @@
 package mpl
 
+import data.InputData
 import utils.ActivationFunction
 import utils.ErrorValue
 import utils.Matrix
@@ -8,19 +9,32 @@ import kotlin.random.Random
 class FeedForward {
 
     suspend fun startFeedForward() {
-        val inputLayer = normalize()
+        val inputLayer = getInputData()
 
         val hiddenLayer = calculateNextLayer(
-            inputLayer,
+            inputLayer.features,
             initWeightData(INPUT_LAYER_NEURON, HIDDEN_LAYER_NEURON),
             initBiasData(HIDDEN_LAYER_NEURON)
         )
+
+        val activatedHiddenLayer = calculateActivatedNet(hiddenLayer)
 
         val outputLayer = calculateNextLayer(
             hiddenLayer,
             initWeightData(HIDDEN_LAYER_NEURON, OUTPUT_NEURON),
             initBiasData(OUTPUT_NEURON)
         )
+
+        val activatedOutputLayer = calculateActivatedNet(outputLayer)
+
+        val errorList = outputLayer.mapIndexed { index, output ->
+            getListOutputError(
+                inputLayer.target[index],
+                output
+            )
+        }
+
+        val flattenErrorList = flatFormErrorList(errorList)
 
         println("Input Layer:\n$inputLayer\n")
         println("Hidden Layer:\n$hiddenLayer\n")
@@ -31,11 +45,12 @@ class FeedForward {
      * Melakukan normalisasi dataset dengan membagi setiap pixel dengan 255
      * @return matrix m x n
      */
-    private suspend fun normalize(): List<List<Double>> {
+    private suspend fun getInputData(): InputData {
         // read data from csv
         val data = Matrix.readCsvFile()
 
         val normalizedData = mutableListOf<List<Double>>()
+        val targetData = mutableListOf<List<Double>>()
         data.forEach { record ->
             // get last position
             val lastPosition = record.size - 1
@@ -45,7 +60,10 @@ class FeedForward {
             record.forEachIndexed { index, pixelValue ->
                 // exclude label
                 if (index != lastPosition) {
-                    newRecord.add(pixelValue.toDouble() / NORMALIZATION_DIVIDER)
+                    newRecord.add(pixelValue / NORMALIZATION_DIVIDER)
+                } else {
+                    // encode target
+                    targetData.add(encodeClass(pixelValue))
                 }
             }
 
@@ -53,7 +71,18 @@ class FeedForward {
             normalizedData.add(newRecord)
         }
 
-        return normalizedData
+        return InputData(normalizedData, targetData)
+    }
+
+    private fun encodeClass(target: Double): MutableList<Double> {
+        val targetValue = mutableListOf<Double>()
+
+        for (i in 0 until OUTPUT_NEURON) {
+            if (i == target.toInt()) targetValue.add(1.0)
+            else targetValue.add(0.0)
+        }
+
+        return targetValue
     }
 
     /**
@@ -62,7 +91,7 @@ class FeedForward {
      * @param targetLayer = layer ke n
      * @return matrix bias m x n
      */
-    fun initWeightData(startLayer: Int, targetLayer: Int): List<List<Double>> {
+    private fun initWeightData(startLayer: Int, targetLayer: Int): List<List<Double>> {
         val weights = mutableListOf<List<Double>>()
 
         for (start in 1..targetLayer) {
@@ -84,7 +113,7 @@ class FeedForward {
      * @param neuron = banyak neuron
      * @return matrix bias m x n
      */
-    fun initBiasData(neuron: Int): List<Double> {
+    private fun initBiasData(neuron: Int): List<Double> {
         val biases = mutableListOf<Double>()
 
         // create random number of bias from 0 to 1 for each branch
@@ -121,7 +150,7 @@ class FeedForward {
                 }
 
                 net += biases[weightRecordIndex]
-                newRecord.add(ActivationFunction.calculateSigmoidFunction(net))
+                newRecord.add(net)
             }
 
             nextLayer.add(newRecord)
@@ -130,7 +159,27 @@ class FeedForward {
         return nextLayer
     }
 
-    fun getListOutputError(
+    private fun calculateActivatedNet(
+        netList: List<List<Double>>
+    ): List<List<Double>> {
+        val activatedNet = mutableListOf<List<Double>>()
+
+        netList.forEach { rows ->
+            val row = mutableListOf<Double>()
+
+            rows.forEach { net ->
+                row.add(
+                    ActivationFunction.calculateSigmoidFunction(net)
+                )
+            }
+
+            activatedNet.add(row)
+        }
+
+        return activatedNet
+    }
+
+    private fun getListOutputError(
         targetList: List<Double>,
         outputLayer: List<Double>
     ): List<Double> {
@@ -146,6 +195,18 @@ class FeedForward {
         }
 
         return errorList
+    }
+
+    private fun flatFormErrorList(errorList: List<List<Double>>): List<Double> {
+        val flattenErrors = mutableListOf<Double>()
+
+        errorList.forEach { rows ->
+            rows.forEach { error ->
+                flattenErrors.add(error)
+            }
+        }
+
+        return flattenErrors
     }
 
     companion object {

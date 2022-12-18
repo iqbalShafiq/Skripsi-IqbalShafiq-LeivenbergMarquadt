@@ -3,9 +3,9 @@ package mpl
 object EpochRegulator {
 
     // init all parameter
-    private val miu = 0.5
-    private val tau = 0.3
-    private val errorTarget = 0.8
+    private val miu = 0.1
+    private val tau = 10.0
+    private val errorTarget = 0.5
     private val maxEpoch = 2
 
     fun startEpoch(
