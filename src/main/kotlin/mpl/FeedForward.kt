@@ -1,69 +1,135 @@
 package mpl
 
+import data.ErrorResult.getResultBias
+import data.ErrorResult.getResultRecord
+import data.FeedForwardResult
 import data.InputData
 import utils.ActivationFunction
 import utils.ErrorValue
 import utils.Matrix
-import kotlin.random.Random
 
-class FeedForward {
+class FeedForward(private val isTesting: Boolean) {
 
-    suspend fun startFeedForward() {
-        val inputLayer = getInputData()
+    fun startFeedForward(
+        miu: Double,
+        vjk: MutableList<MutableList<Double>> = mutableListOf(),
+        wjk: MutableList<MutableList<Double>> = mutableListOf(),
+        filePath: String = "src/data.csv"
+    ): FeedForwardResult {
+        val inputLayer = getInputData(filePath)
+
+        val inputWeightData = if (vjk.isNotEmpty()) {
+            val weight = mutableListOf<MutableList<Double>>()
+            vjk.forEach { rows ->
+                val record = mutableListOf<Double>()
+
+                rows.forEachIndexed { index, value ->
+                    if (index != vjk.first().size - 1) {
+                        record.add(value)
+                    }
+                }
+
+                weight.add(record)
+            }
+
+            weight
+        } else {
+            initWeightData(INPUT_LAYER_NEURON, HIDDEN_LAYER_NEURON)
+        }
+
+        val inputBiasData = if (vjk.isNotEmpty()) vjk.last() else {
+            initBiasData(HIDDEN_LAYER_NEURON)
+        }
+        val hiddenWeightData = if (vjk.isNotEmpty()) {
+            val weight = mutableListOf<MutableList<Double>>()
+            wjk.forEach { rows ->
+                val record = mutableListOf<Double>()
+
+                rows.forEachIndexed { index, value ->
+                    if (index != wjk.first().size - 1) {
+                        record.add(value)
+                    }
+                }
+
+                weight.add(record)
+            }
+
+            weight
+        } else {
+            initWeightData(HIDDEN_LAYER_NEURON, OUTPUT_NEURON)
+        }
+
+        val hiddenBiasData = if (wjk.isNotEmpty()) wjk.last() else {
+            initBiasData(OUTPUT_NEURON)
+        }
+
+        val inputWeight = mutableListOf<List<Double>>()
+        inputWeightData.forEachIndexed { index, rows ->
+            rows.add(inputBiasData[index])
+            inputWeight.add(rows)
+        }
+
+        val hiddenWeight = mutableListOf<List<Double>>()
+        hiddenWeightData.forEachIndexed { index, rows ->
+            rows.add(hiddenBiasData[index])
+            hiddenWeight.add(rows)
+        }
 
         val hiddenLayer = calculateNextLayer(
             inputLayer.features,
-            initWeightData(INPUT_LAYER_NEURON, HIDDEN_LAYER_NEURON),
-            initBiasData(HIDDEN_LAYER_NEURON)
+            inputWeightData,
+            inputBiasData
         )
 
         val activatedHiddenLayer = calculateActivatedNet(hiddenLayer)
 
         val outputLayer = calculateNextLayer(
             hiddenLayer,
-            initWeightData(HIDDEN_LAYER_NEURON, OUTPUT_NEURON),
-            initBiasData(OUTPUT_NEURON)
+            hiddenWeightData,
+            hiddenBiasData
         )
 
         val activatedOutputLayer = calculateActivatedNet(outputLayer)
 
-        val errorList = outputLayer.mapIndexed { index, output ->
-            getListOutputError(
-                inputLayer.target[index],
-                output
-            )
-        }
+        val errorList = getListOutputError(
+            inputLayer.target,
+            activatedOutputLayer.first()
+        )
 
-        val flattenErrorList = flatFormErrorList(errorList)
+        val mse = ErrorValue.calculateMeanSquaredError(errorList)
 
-        println("Input Layer:\n$inputLayer\n")
-        println("Hidden Layer:\n$hiddenLayer\n")
-        println("Output Layer:\n$outputLayer")
+        return FeedForwardResult(
+            inputLayer, hiddenLayer,
+            activatedHiddenLayer, outputLayer,
+            inputWeight,
+            hiddenWeight,
+            activatedOutputLayer,
+            errorList, mse, miu
+        )
     }
 
     /**
      * Melakukan normalisasi dataset dengan membagi setiap pixel dengan 255
      * @return matrix m x n
      */
-    private suspend fun getInputData(): InputData {
+    fun getInputData(filePath: String): InputData {
         // read data from csv
-        val data = Matrix.readCsvFile()
+        val data = Matrix.readCsvFile(filePath)
 
         val normalizedData = mutableListOf<List<Double>>()
-        val targetData = mutableListOf<List<Double>>()
+        var targetData = mutableListOf<Double>()
         data.forEach { record ->
             // get last position
             val lastPosition = record.size - 1
             val newRecord = mutableListOf<Double>()
 
-            // divide every pixel with 255
-            record.forEachIndexed { index, pixelValue ->
-                // exclude label
+            record.forEachIndexed { index, value ->
+                // exclude target
                 if (index != lastPosition) {
-                    newRecord.add(pixelValue / NORMALIZATION_DIVIDER)
+                    newRecord.add(value / NORMALIZATION_DIVIDER)
                 } else {
-                    // encode target
-                    targetData.add(encodeClass(pixelValue))
+                    // target data
+                    targetData.add(value)
                 }
             }
 
@@ -74,32 +140,21 @@ class FeedForward {
         return InputData(normalizedData, targetData)
     }
 
-    private fun encodeClass(target: Double): MutableList<Double> {
-        val targetValue = mutableListOf<Double>()
-
-        for (i in 0 until OUTPUT_NEURON) {
-            if (i == target.toInt()) targetValue.add(1.0)
-            else targetValue.add(0.0)
-        }
-
-        return targetValue
-    }
-
     /**
      * Inisialisasi beban secara random dari layer n-1 ke layer n
      * @param startLayer = layer ke n-1
      * @param targetLayer = layer ke n
      * @return matrix bias m x n
      */
-    private fun initWeightData(startLayer: Int, targetLayer: Int): List<List<Double>> {
-        val weights = mutableListOf<List<Double>>()
+    private fun initWeightData(startLayer: Int, targetLayer: Int): MutableList<MutableList<Double>> {
+        val weights = mutableListOf<MutableList<Double>>()
 
         for (start in 1..targetLayer) {
             val record = mutableListOf<Double>()
 
             // create random number of weight from 0 to 1  for each branch
             for (target in 1..startLayer) {
-                record.add(Random.nextDouble(0.0, 1.0))
+                record.add(getResultRecord())
             }
 
             weights.add(record)
@@ -118,7 +173,7 @@ class FeedForward {
 
         // create random number of bias from 0 to 1 for each branch
         for (start in 1..neuron) {
-            biases.add(Random.nextDouble(0.0, 1.0))
+            biases.add(getResultBias())
         }
 
         return biases
@@ -145,8 +200,8 @@ class FeedForward {
             weights.forEachIndexed { weightRecordIndex, weightRecord ->
                 var net = 0.0
 
-                record.forEachIndexed { recordDataIndex, recordData ->
-                    net += recordData * weightRecord[recordDataIndex]
+                record.forEachIndexed { recordIndex, recordData ->
+                    net += recordData * weights[weightRecordIndex][recordIndex]
                 }
 
                 net += biases[weightRecordIndex]
@@ -169,7 +224,7 @@ class FeedForward {
 
             rows.forEach { net ->
                 row.add(
-                    ActivationFunction.calculateSigmoidFunction(net)
+                    ActivationFunction.calculateSigmoidFunction(net, isTesting)
                 )
             }
 
@@ -210,11 +265,9 @@ class FeedForward {
     }
 
     companion object {
-        private const val INPUT_LAYER_NEURON = 2
-        private const val HIDDEN_LAYER_NEURON = 4
-        private const val OUTPUT_NEURON = 7
-        private const val MAX_EPOCH = 5
-        private const val ERROR_TARGET = 0.5
+        private const val INPUT_LAYER_NEURON = 13
+        private const val HIDDEN_LAYER_NEURON = 1
+        private const val OUTPUT_NEURON = 1
         private const val NORMALIZATION_DIVIDER = 255
     }
 }

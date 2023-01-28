@@ -1,6 +1,7 @@
 package utils
 
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import data.ErrorResult.getFinalResult
 import org.jetbrains.kotlinx.multik.api.linalg.inv
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
@@ -13,18 +14,23 @@ object Matrix {
      * Membaca data dari file csv
      * @return matrix m x n
      */
-    suspend fun readCsvFile(): List<List<Double>> {
+    fun readCsvFile(filePath: String): List<List<Double>> {
         val data = mutableListOf<MutableList<Double>>()
 
-        csvReader().openAsync("src/data.csv") {
+        csvReader().open(filePath) {
             readAllWithHeaderAsSequence().forEach {
                 // add data to record
-                val record = mutableListOf<Double>()
-                it.values.forEach { value ->
-                    record.add(value.toDouble())
-                }
+                try {
+                    val record = mutableListOf<Double>()
+                    it.values.forEach { value ->
+                        record.add(value.toDouble())
+                    }
 
-                data.add(record)
+                    data.add(record)
+                } catch (e: Exception) {
+                    println("New Record Exception ${e.message}")
+                    e.printStackTrace()
+                }
             }
         }
 
@@ -37,11 +43,29 @@ object Matrix {
      */
     fun printMatrix(matrix: List<List<Double>>) {
         matrix.forEach { record ->
-            print("|")
+            println("|")
 
             record.forEachIndexed { index, recordData ->
-                if (index != record.size - 1) print("$recordData ")
-                else print(recordData)
+                if (index != record.size - 1) println("$recordData ")
+                else println(recordData)
+            }
+
+            println("|")
+        }
+    }
+
+    /**
+     * Memberikan output dari array ke layar pengguna
+     * @param matrix = array m x n dengan tipe data double
+     */
+    fun printWeight(matrix: List<List<Double>>) {
+        matrix.forEach { record ->
+            println("|")
+
+            record.forEachIndexed { index, recordData ->
+                if (index != record.size - 1) {
+                    println("$recordData ")
+                } else println(recordData)
             }
 
             println("|")
@@ -205,7 +229,19 @@ object Matrix {
         matrixA: List<List<Double>>,
         matrixB: List<List<Double>>
     ): List<List<Double>> {
-        return mutableListOf()
+        val totalMatrix = mutableListOf<List<Double>>()
+
+        matrixA.forEachIndexed { rowIndex, rows ->
+            val newRow = mutableListOf<Double>()
+
+            rows.forEachIndexed { index, value ->
+                newRow.add(value + matrixB[rowIndex][index])
+            }
+
+            totalMatrix.add(newRow)
+        }
+
+        return totalMatrix
     }
 
     /**

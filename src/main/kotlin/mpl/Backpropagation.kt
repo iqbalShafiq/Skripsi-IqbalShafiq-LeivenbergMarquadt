@@ -1,40 +1,41 @@
 package mpl
 
-import data.WeightResult
+import data.BackpropagationResult
 import utils.ActivationFunction.calculateDerivativeSigmoidFunction
 import utils.Matrix.calculateMatrixIdentity
 import utils.Matrix.calculatePseudoInverse
 import utils.Matrix.createHessianMatrix
 import utils.Matrix.sumTwoMatrix
 import utils.Matrix.timesConstWithMatrix
-import utils.Matrix.timesMatrixWithColumnMatrix
+import utils.Matrix.transposeMatrix
+import kotlin.random.Random
 
 class Backpropagation(
     private val inputLayer: List<Double>,
     private val hiddenNetLayer: List<Double>,
     private val hiddenLayer: List<Double>,
+    private val outputLayer: List<Double>,
     private val inputWeight: List<List<Double>>,
     private val hiddenWeight: List<List<Double>>,
-    private val targetData: List<List<Double>>,
     private val errorList: List<Double>,
     private val miu: Double
 ) {
 
-    fun startBackpropagation(): WeightResult {
-        // hidden ~ output
+    fun startBackpropagation(): BackpropagationResult {
+        // output ~ hidden
         val errorOutputLayer = calculateErrorOutputLayerNeuron(
-            hiddenNetLayer,
+            outputLayer,
             errorList
         )
         val correctionHiddenOutputWeight = calculateCorrectionWeight(
-            hiddenLayer,
+            hiddenNetLayer,
             errorOutputLayer
         )
         val correctionHiddenOutputBias = correctionHiddenOutputWeight.map { corrections ->
             corrections.last()
         }
 
-        // input ~ hidden
+        // hidden ~ input
         val errorNetHiddenLayer = calculateNetErrorHiddenLayerNeuron(
             errorOutputLayer,
             hiddenWeight
@@ -66,22 +67,30 @@ class Backpropagation(
                 calculateMatrixIdentity(jacobianMatrix.first().size),
                 miu
             ),
-            errorOutputLayer
+            errorList.first()
         )
 
         // set form of delta weight and bias
-        val formedMatrixDeltaWeight = setDeltaWeightMatrixForm(correctionAllWeightAndBias)
+        val formedMatrixDeltaWeight = mutableListOf(correctionAllWeightAndBias)
 
         // get corrected weight and bias
         val correctedInputHiddenWeight = mutableListOf<List<Double>>()
         val correctedHiddenOutputWeight = mutableListOf<List<Double>>()
 
-        formedMatrixDeltaWeight.forEachIndexed { index, rows ->
-            if (index < inputWeight.size) {
-                correctedInputHiddenWeight.add(rows)
-            } else {
-                correctedHiddenOutputWeight.add(rows)
+        formedMatrixDeltaWeight.forEach { rows ->
+            val correctedVWeight = mutableListOf<Double>()
+            val correctedWWeight = mutableListOf<Double>()
+
+            rows.forEachIndexed { weightIndex, weight ->
+                if (weightIndex <= inputLayer.size) {
+                    correctedVWeight.add(weight)
+                } else {
+                    correctedWWeight.add(weight)
+                }
             }
+
+            correctedInputHiddenWeight.add(correctedVWeight)
+            correctedHiddenOutputWeight.add(correctedWWeight)
         }
 
         // get the update of weight and bias
@@ -96,7 +105,7 @@ class Backpropagation(
         )
 
         // return weight result
-        return WeightResult(
+        return BackpropagationResult(
             updatedInputHiddenWeight,
             updatedHiddenOutputWeight
         )
@@ -137,7 +146,9 @@ class Backpropagation(
             var net = 0.0
 
             rows.forEach { weight ->
-                net += errorOutputLayer[index] * weight
+                if (index != errorOutputLayer.size) {
+                    net += errorOutputLayer[index] * weight
+                }
             }
 
             errorNetHiddenLayer.add(net)
@@ -193,7 +204,7 @@ class Backpropagation(
      * @param correctionHiddenOutputBias as Δb2_k: koreksi bias hidden ke output
      * @param correctionInputHiddenWeight as Δv_jk: koreksi bobot input ke hidden
      * @param correctionInputHiddenBias as Δb1_j: koreksi bias input ke hidden
-     * @return matrixJ = matriks jacobian m x 1
+     * @return matrixJ = matriks jacobian 1 x m
      */
     private fun getMatrixJacobian(
         correctionHiddenOutputWeight: List<List<Double>>,
@@ -204,14 +215,6 @@ class Backpropagation(
         val matrixJ = mutableListOf<List<Double>>()
         val row = mutableListOf<Double>()
 
-        // add correction Δw_jk
-        correctionHiddenOutputWeight.forEach { rows ->
-            rows.forEach { weight -> row.add(weight) }
-        }
-
-        // add correction Δb2_k
-        correctionHiddenOutputBias.forEach { bias -> row.add(bias) }
-
         // add correction Δv_jk
         correctionInputHiddenWeight.forEach { rows ->
             rows.forEach { weight -> row.add(weight) }
@@ -220,7 +223,15 @@ class Backpropagation(
         // add correction Δb1_k
         correctionInputHiddenBias.forEach { bias -> row.add(bias) }
 
-        // add one row into matrixJ to create m x 1 matriks
+        // add correction Δw_jk
+        correctionHiddenOutputWeight.forEach { rows ->
+            rows.forEach { weight -> row.add(weight) }
+        }
+
+        // add correction Δb2_k
+        correctionHiddenOutputBias.forEach { bias -> row.add(bias) }
+
+        // add one row into matrixJ to create 1 x m matriks
         matrixJ.add(row)
 
         return matrixJ
@@ -228,13 +239,20 @@ class Backpropagation(
 
     /**
      * @param pseudoInverseMatrix = matriks pseudo inverse m x n dengan tipe data double
-     * @param outputError as e = matriks error output jaringan m x 1 dengan tipe data double
-     * @return Δw = pseudoInverse * e
+     * @param outputError as e = matriks error output jaringan n x 1 dengan tipe data double
+     * @return Δw = pseudoInverse * e dengan bentuk matriks m x 1
      */
     private fun calculateDeltaWeight(
         pseudoInverseMatrix: List<List<Double>>,
-        outputError: List<Double>
-    ): List<Double> = timesMatrixWithColumnMatrix(pseudoInverseMatrix, outputError)
+        outputError: Double
+    ): List<Double> {
+        return transposeMatrix(
+            timesConstWithMatrix(
+                outputError,
+                pseudoInverseMatrix
+            )
+        ).first()
+    }
 
     /**
      * @param deltaWeight as Δw: matriks koreksi bobot & bias m x 1
@@ -247,18 +265,15 @@ class Backpropagation(
         var index = 0
 
         // correction weight from input to hidden layer (v)
-        inputWeight.forEach { rows ->
+        inputWeight.first().forEachIndexed { recordIndex, _ ->
             val newRow = mutableListOf<Double>()
 
-            rows.forEachIndexed { vIndex, _ ->
-                // exclude for bias (b1)
-                if (vIndex != rows.size - 1) {
-                    newRow.add(deltaWeight[index])
-                    index++
-                }
+            // exclude for bias (b1)
+            if (recordIndex < inputWeight.first().size - 1) {
+                newRow.add(deltaWeight[index])
+                index++
+                newFormDeltaWeight.add(newRow)
             }
-
-            newFormDeltaWeight.add(newRow)
         }
 
         // correction bias from input to hidden layer (b1)
@@ -268,15 +283,13 @@ class Backpropagation(
         }
 
         // correction weight from hidden to output layer (w)
-        hiddenWeight.forEach { rows ->
+        hiddenWeight.first().forEachIndexed { recordIndex, _ ->
             val newRow = mutableListOf<Double>()
 
-            rows.forEachIndexed { wIndex, _ ->
-                // exclude for bias (b2)
-                if (wIndex != rows.size - 1) {
-                    newRow.add(deltaWeight[index])
-                    index++
-                }
+            // exclude for bias (b2)
+            if (recordIndex != hiddenWeight.first().size - 1) {
+                newRow.add(deltaWeight[index])
+                index++
             }
 
             newFormDeltaWeight.add(newRow)

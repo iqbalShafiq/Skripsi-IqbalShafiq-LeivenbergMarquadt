@@ -3,17 +3,15 @@ package mpl
 object EpochRegulator {
 
     // init all parameter
-    private val miu = 0.1
-    private val tau = 10.0
-    private val errorTarget = 0.5
-    private val maxEpoch = 2
+    private const val MAX_EPOCH = 20
+    private const val ERROR_TARGET = 0.1
+    private const val TAU_FACTOR = 10.0
+    const val MIU = 0.01
 
     fun startEpoch(
-        onEpochStarted: () -> Unit
+        onEpochStarted: (maxEpoch: Int, errorTarget: Double) -> Unit
     ) {
-        for (currentEpoch in 0 .. maxEpoch) {
-            onEpochStarted()
-        }
+        onEpochStarted(MAX_EPOCH, ERROR_TARGET)
     }
 
     /**
@@ -27,14 +25,13 @@ object EpochRegulator {
     fun getNewLMParameter(
         currentMSE: Double,
         latestMSE: Double,
-        marquardt: Double,
-        tau: Double
+        marquardt: Double
     ): Double {
         if (latestMSE <= currentMSE) {
-            return marquardt / tau
+            return marquardt / TAU_FACTOR
         }
 
-        return marquardt * tau
+        return marquardt * TAU_FACTOR
     }
 
     /**
