@@ -20,7 +20,7 @@ class Backpropagation(
     private val miu: Double
 ) {
 
-    fun startBackpropagation(): WeightResult {
+    fun startBackpropagation() {
         // hidden ~ output
         val errorOutputLayer = calculateErrorOutputLayerNeuron(
             hiddenNetLayer,
@@ -59,15 +59,7 @@ class Backpropagation(
         )
 
         // calculate Δw and Δv for update weight
-        val correctionAllWeightAndBias = calculateDeltaWeight(
-            calculatePseudoInverse(
-                createHessianMatrix(jacobianMatrix),
-                jacobianMatrix,
-                calculateMatrixIdentity(jacobianMatrix.first().size),
-                miu
-            ),
-            errorOutputLayer
-        )
+        val correctionAllWeightAndBias = listOf<Double>()
 
         // set form of delta weight and bias
         val formedMatrixDeltaWeight = setDeltaWeightMatrixForm(correctionAllWeightAndBias)
@@ -96,10 +88,10 @@ class Backpropagation(
         )
 
         // return weight result
-        return WeightResult(
-            updatedInputHiddenWeight,
-            updatedHiddenOutputWeight
-        )
+//        return WeightResult(
+//            updatedInputHiddenWeight,
+//            updatedHiddenOutputWeight
+//        )
     }
 
     /**
@@ -165,8 +157,8 @@ class Backpropagation(
 
     /**
      * Menghitung koreksi beban dari setiap signal layer ke target layer
-     * @param signalLayer as z_j or x_j: matriks m x 1 dari layer sebelumnya bertipe data double
-     * @param errorNeuron as δ2_k or δ1_k: matriks n x 1 dari error pada layer
+     * @param signalLayer z_j or x_j: matriks m x 1 dari layer sebelumnya bertipe data double
+     * @param errorNeuron δ2_k or δ1_k: matriks n x 1 dari error pada layer
      * @return φ_jk = δ_k * z_j
      */
     private fun calculateCorrectionWeight(

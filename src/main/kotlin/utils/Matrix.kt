@@ -4,6 +4,11 @@ import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import org.jetbrains.kotlinx.multik.api.linalg.inv
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
+import org.jetbrains.kotlinx.multik.api.toNDArray
+import org.jetbrains.kotlinx.multik.ndarray.data.D2
+import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
+import org.jetbrains.kotlinx.multik.ndarray.operations.plus
+import org.jetbrains.kotlinx.multik.ndarray.operations.times
 import org.jetbrains.kotlinx.multik.ndarray.operations.toListD2
 import java.io.IOException
 
@@ -13,10 +18,10 @@ object Matrix {
      * Membaca data dari file csv
      * @return matrix m x n
      */
-    suspend fun readCsvFile(): List<List<Double>> {
+    fun readCsvFile(): List<List<Double>> {
         val data = mutableListOf<MutableList<Double>>()
 
-        csvReader().openAsync("src/data.csv") {
+        csvReader().open("src/data.csv") {
             readAllWithHeaderAsSequence().forEach {
                 // add data to record
                 val record = mutableListOf<Double>()
@@ -178,7 +183,11 @@ object Matrix {
         val rowMatrixBSize = matrixB.size
 
         // check dimensions of two matrix
-        if (columnMatrixASize != rowMatrixBSize) throw IOException()
+        if (columnMatrixASize != rowMatrixBSize) {
+            println("columnMatrixASize: $columnMatrixASize")
+            println("rowMatrixBSize: $rowMatrixBSize")
+            throw IOException()
+        }
 
         // continue if the dimensions is valid
         val resultMatrix = mutableListOf<Double>()
@@ -187,9 +196,9 @@ object Matrix {
             var sum = 0.0
 
             for (column in 0 until columnMatrixASize) {
-                sum += (matrixA[row][column] * matrixB[row])
-                resultMatrix.add(sum)
+                sum += (matrixA[row][column] * matrixB[column])
             }
+            resultMatrix.add(sum)
         }
 
         return resultMatrix
@@ -205,7 +214,19 @@ object Matrix {
         matrixA: List<List<Double>>,
         matrixB: List<List<Double>>
     ): List<List<Double>> {
-        return mutableListOf()
+        val totalMatrix = mutableListOf<List<Double>>()
+
+        matrixA.forEachIndexed { rowIndex, rows ->
+            val newRow = mutableListOf<Double>()
+
+            rows.forEachIndexed { index, value ->
+                newRow.add(value + matrixB[rowIndex][index])
+            }
+
+            totalMatrix.add(newRow)
+        }
+
+        return totalMatrix
     }
 
     /**
@@ -249,24 +270,14 @@ object Matrix {
      * @return pseudoInverse = inverse(J * transpose(J) + miu * I) * transpose(J)
      */
     fun calculatePseudoInverse(
-        hessianMatrix: List<List<Double>>,
-        jacobianMatrix: List<List<Double>>,
-        identityMatrix: List<List<Double>>,
+        hessianMatrix: NDArray<Double, D2>,
+        identityMatrix: NDArray<Double, D2>,
         miu: Double,
     ): List<List<Double>> {
-        val sumMatrix = mk.ndarray(
-            sumTwoMatrix(
-                hessianMatrix,
-                timesConstWithMatrix(miu, identityMatrix)
-            )
-        )
+        val sumMatrix = hessianMatrix + (identityMatrix * miu)
+        val inverseMatrix = mk.linalg.inv(sumMatrix)
 
-        val inverseMatrix = mk.linalg.inv(sumMatrix).toListD2()
-
-        return timesNonSquareMatrix(
-            inverseMatrix,
-            transposeMatrix(jacobianMatrix)
-        )
+        return inverseMatrix.toListD2()
     }
 
 }

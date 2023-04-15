@@ -17,7 +17,7 @@ dependencies {
     implementation(kotlin("reflect"))
 
     // multik
-    implementation("org.jetbrains.kotlinx:multik-core:0.2.1")
+    implementation("org.jetbrains.kotlinx:multik-core:0.2.0")
     implementation("org.jetbrains.kotlinx:multik-default:0.2.1")
 
     //doyaaaaaken's kotlin-csv
