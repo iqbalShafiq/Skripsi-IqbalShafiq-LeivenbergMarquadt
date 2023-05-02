@@ -45,7 +45,7 @@ fun main() {
     var mse = 9.99
     val beta = 1.005
     var epochCounter = 0
-    while (epochCounter < 10) {
+    while (mse > 0.01) {
         epochCounter++
         val weightResult = NewBackpropagation(
             feedForwardResult.targetList,
