@@ -51,6 +51,7 @@ class FeedForward {
             activatedOutputLayer
         )
         val accuracyValue = 100 - errorValue
+        val mse = ErrorValue.calculateMeanSquaredError(flattenErrorList)
 
         println("Input Layer:\n$inputLayer\n")
         println("Input ~ Hidden Weight:\n$inputHiddenWeights\n")
@@ -61,10 +62,11 @@ class FeedForward {
         println("Hidden ~ Output Bias:\n$hiddenOutputBiases\n")
         println("Output Layer:\n$outputLayer\n")
         println("Activated Output Layer:\n$activatedOutputLayer\n")
-        println("Categorical Cross Entropy:\n$errorList\n")
-        println("Flatten Categorical Cross Entropy:\n$flattenErrorList\n")
+        println("Error Values:\n$errorList\n")
+        println("Flatten Error Values:\n$flattenErrorList\n")
         println("Error Accuracy:\n$errorValue\n")
         println("Accuracy:\n$accuracyValue\n")
+        println("MSE:\n$mse\n")
 
         return FeedForwardResult(
             inputLayer.target,
@@ -75,7 +77,8 @@ class FeedForward {
             activatedOutputLayer,
             flattenErrorList,
             errorValue,
-            accuracyValue
+            accuracyValue,
+            mse
         )
     }
 
@@ -86,7 +89,7 @@ class FeedForward {
     fun getInputData(): InputData {
         // read data from csv
         val data = Matrix.readCsvFile().filterIndexed { index, _ ->
-            index < 5
+            index < 3500
         }
 
         val normalizedData = mutableListOf<List<Double>>()
@@ -145,7 +148,7 @@ class FeedForward {
 
         // create random number of bias from 0 to 1 for each branch
         for (start in 0 until neuron) {
-            biases.add(Random.nextDouble(0.0, 0.1))
+            biases.add(Random.nextDouble(0.0, 1.0))
         }
 
         return biases
@@ -157,7 +160,7 @@ class FeedForward {
      * @param startLayer nilai input dari layer n-1
      * @param weights bobot dari layer n-1 ke layer n
      * @param biases bias dari layer n-1 ke layer n
-     * @return hasil dari f(net) = 1 / (1 + exp(net))
+     * @return hasil dari net = bias + sum(startLayerValue * weight)
      */
     private fun calculateNextLayer(
         startLayer: List<List<Double>>,
@@ -165,7 +168,6 @@ class FeedForward {
         biases: List<Double>
     ): List<List<Double>> {
         val nextLayer = mutableListOf<List<Double>>()
-        val trying = mutableListOf<Double>()
 
         startLayer.forEach { record ->
             val newRecord = mutableListOf<Double>()
@@ -179,12 +181,10 @@ class FeedForward {
 
                 net += biases[weightRecordIndex]
                 newRecord.add(net)
-                trying.add(net)
             }
 
             nextLayer.add(newRecord)
         }
-        println("New Record distinct size: ${trying.distinct().size}")
 
         return nextLayer
     }
@@ -235,12 +235,11 @@ class FeedForward {
     ): List<Double> {
         val errorList = mutableListOf<Double>()
 
-        val targetIndex = target.toInt()
-        errorList.add(
-            ErrorValue.calculateCategoricalCrossEntropyLoss(
-                outputLayer[targetIndex]
+        outputLayer.forEachIndexed { index, outputValue ->
+            errorList.add(
+                ErrorValue.calculateOutputLayerError(target, outputValue, index)
             )
-        )
+        }
 
         return errorList
     }
@@ -249,7 +248,9 @@ class FeedForward {
         val flattenErrors = mutableListOf<Double>()
 
         errorList.forEach { rows ->
-            flattenErrors.add(rows[0])
+            rows.forEach { rowValue ->
+                flattenErrors.add(rowValue)
+            }
         }
 
         return flattenErrors

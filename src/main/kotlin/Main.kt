@@ -41,9 +41,12 @@ fun main() {
     backproHiddenWeight = hiddenWeight
 
     var accuracy = feedForwardResult.accuracyValue
-    var miu = 0.5
+    var miu = 0.9
+    var mse = 9.99
     val beta = 1.005
-    while (accuracy < 80.0) {
+    var epochCounter = 0
+    while (epochCounter < 10) {
+        epochCounter++
         val weightResult = NewBackpropagation(
             feedForwardResult.targetList,
             feedForwardResult.inputLayer,
@@ -65,6 +68,8 @@ fun main() {
                 hiddenOutputWeight,
                 hiddenOutputBias
             )
+            println("Epoch: $epochCounter")
+            println("Miu: $miu")
 
             inputHiddenWeight.forEachIndexed { index, row ->
                 row.add(inputHiddenBias[index])
@@ -86,11 +91,12 @@ fun main() {
                 errorList = newFeedForwardResult.errorList
             }
 
-//            if (accuracy < newFeedForwardResult.accuracyValue) {
-//                miu *= beta
-//            } else {
-//                miu /= beta
-//            }
+            mse = newFeedForwardResult.mse
+            if (mse < feedForwardResult.mse) {
+                miu /= beta
+            } else {
+                miu *= beta
+            }
 
             accuracy = newFeedForwardResult.accuracyValue
         }

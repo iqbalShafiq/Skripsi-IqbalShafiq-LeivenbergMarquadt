@@ -44,4 +44,31 @@ object ActivationFunction {
     fun calculateSoftmaxFunction(net: Double, netList: List<Double>): Double {
         return exp(net) / netList.sumOf { exp(it) }
     }
+
+    /**
+     * Menghitung fungsi aktivasi softmax berdasarkan net
+     * @param currentNet = input dengan tipe data double
+     * @param netLIst = list semua input dengan tipe data double
+     * @return mengembalikan nilai dengan tipe data double
+     */
+    fun calculateDerivativeSoftmaxFunction(
+        currentNet: Double,
+        selectedNet: Double,
+        netList: List<Double>,
+        isSameIndex: Boolean = true
+    ): Double = if (isSameIndex) {
+        calculateSoftmaxFunction(
+            currentNet,
+            netList
+        ) * (1 - calculateSoftmaxFunction(selectedNet, netList))
+    } else {
+        -calculateSoftmaxFunction(
+            currentNet,
+            netList
+        ) * calculateSoftmaxFunction(
+            selectedNet,
+            netList
+        )
+    }
+
 }

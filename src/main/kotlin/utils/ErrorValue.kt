@@ -52,6 +52,15 @@ object ErrorValue {
     ): Double = -log(outputValue, 10.0)
 
     /**
+     * Menghitung Categorical Cross Entropy Loss (CCE)
+     * @param outputValue nilai aktivasi pada index sesuai target dari output layer
+     * @return -log(outputValue) dengan tipe data double
+     */
+    fun calculateDerivativeCategoricalCrossEntropyLoss(
+        outputValue: Double
+    ): Double = -1 / outputValue
+
+    /**
      * Menghitung error berdasarkan target dengan aktual value
      * @param targetValueList list target dari data
      * @param activatedOutputLayer index dari actual value yang didapatkan dari feedforward

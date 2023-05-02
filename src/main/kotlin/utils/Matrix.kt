@@ -42,16 +42,22 @@ object Matrix {
      */
     fun printMatrix(matrix: List<List<Double>>) {
         matrix.forEach { record ->
-            print("|")
+            print("|\t\t")
 
             record.forEachIndexed { index, recordData ->
-                if (index != record.size - 1) print("$recordData ")
-                else print(recordData)
+                if (index != record.size - 1) print("${recordData.format(8)}\t\t")
+                else print("${recordData.format(8)}\t\t")
             }
 
             println("|")
         }
     }
+
+    private fun Double.format(digits:Int) = String.Companion.format(
+        java.util.Locale.ENGLISH,
+        "%#,.${digits}f",
+        this
+    )
 
     /**
      * Mencari matrix identitas sesuai dimensi

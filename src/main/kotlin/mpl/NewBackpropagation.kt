@@ -9,7 +9,9 @@ import org.jetbrains.kotlinx.multik.ndarray.data.D2
 import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
 import org.jetbrains.kotlinx.multik.ndarray.operations.minus
 import org.jetbrains.kotlinx.multik.ndarray.operations.toListD2
+import utils.ActivationFunction.calculateDerivativeRELuFunction
 import utils.ActivationFunction.calculateDerivativeSigmoidFunction
+import utils.ActivationFunction.calculateDerivativeSoftmaxFunction
 import utils.Matrix
 import utils.Matrix.calculatePseudoInverse
 import utils.Matrix.timesMatrixWithColumnMatrix
@@ -30,7 +32,7 @@ class NewBackpropagation(
     fun startBackpropagation(): WeightResult {
         // output ~ hidden
         val weightCorrectionHiddenOutput = mutableListOf<List<List<Double>>>()
-        outputLayer.forEachIndexed { dataIndex, outputValuePerData ->
+        signalOutputLayer.forEachIndexed { dataIndex, outputValuePerData ->
             val weightCorrectionHiddenOutputPerData = mutableListOf<List<Double>>()
 
             calculateWeightCorrectionOutputHiddenNeuron(
@@ -45,7 +47,7 @@ class NewBackpropagation(
         }
 
         val biasCorrectionHiddenOutput = mutableListOf<List<Double>>()
-        outputLayer.forEachIndexed { dataIndex, outputLayerPerData ->
+        signalOutputLayer.forEachIndexed { dataIndex, outputLayerPerData ->
             biasCorrectionHiddenOutput.add(
                 calculateBiasCorrectionOutputHiddenNeuron(
                     targetList[dataIndex],
@@ -55,12 +57,12 @@ class NewBackpropagation(
         }
 
         // hidden ~ input
-        val weightCorrectionInputHidden = mutableListOf<List<List<Double>>>()
+        val weightCorrectionInputHidden = mutableListOf<List<List<List<Double>>>>()
         signalHiddenLayer.forEachIndexed { dataIndex, signalHidden ->
-            val weightCorrectionInputHiddenPerData = mutableListOf<List<Double>>()
+            val weightCorrectionInputHiddenPerData = mutableListOf<List<List<Double>>>()
             calculateWeightCorrectionHiddenInputNeuron(
                 targetList[dataIndex],
-                outputLayer[dataIndex],
+                signalOutputLayer[dataIndex],
                 signalHidden,
                 inputLayer[dataIndex]
             ).forEach { weightListPerData ->
@@ -77,7 +79,7 @@ class NewBackpropagation(
             val biasCorrectionInputHiddenPerData = mutableListOf<List<Double>>()
             calculateBiasCorrectionHiddenInputNeuron(
                 targetList[dataIndex],
-                outputLayer[dataIndex],
+                signalOutputLayer[dataIndex],
                 signalHidden
             ).forEach {
                 biasCorrectionInputHiddenPerData.add(it)
@@ -170,26 +172,26 @@ class NewBackpropagation(
     /**
      * Menghitung koreksi bobot pada setiap neuron di output layer
      * @param targetValue as t: nilai target sesuai data input
-     * @param outputLayer as y_k: nilai aktivasi output layer dengan tipe data double
+     * @param signalOutputLayer as y_in_k: nilai signal output layer dengan tipe data double
      * @param hiddenLayer as z_j: nilai dari neuron hidden layer
-     * @return (y_k - 1) * z_j, k == l || y_k * z_j, k != l
+     * @return -g'(y_in_k) * z_j
      */
     private fun calculateWeightCorrectionOutputHiddenNeuron(
         targetValue: Double,
-        outputLayer: List<Double>,
+        signalOutputLayer: List<Double>,
         hiddenLayer: List<Double>
     ): List<List<Double>> {
         val weightCorrection = mutableListOf<List<Double>>()
 
-        outputLayer.forEachIndexed { kIndex, outputValue ->
+        signalOutputLayer.forEachIndexed { kIndex, outputNet ->
             val outputRowCorrection = mutableListOf<Double>()
 
             hiddenLayer.forEach { hiddenValue ->
-                // (y_k - 1) * z_j, k == l
-                // y_k * z_j, k != l
                 outputRowCorrection.add(
-                    if (targetValue.toInt() == kIndex) (outputValue - 1) * hiddenValue
-                    else outputValue * hiddenValue
+                    -calculateDerivativeSoftmaxFunction(
+                        signalOutputLayer[targetValue.toInt()], outputNet,
+                        signalOutputLayer, targetValue.toInt() == kIndex
+                    ) * hiddenValue
                 )
             }
 
@@ -202,21 +204,21 @@ class NewBackpropagation(
     /**
      * Menghitung koreksi bias pada setiap neuron di output layer
      * @param targetValue as t: nilai target sesuai data input
-     * @param outputLayer as y_k: nilai aktivasi output layer dengan tipe data double
-     * @return y_k - 1, k == l || y_k, k != l
+     * @param signalOutputLayer as y_in_k: nilai signal output layer dengan tipe data double
+     * @return -g'(y_in_k)
      */
     private fun calculateBiasCorrectionOutputHiddenNeuron(
         targetValue: Double,
-        outputLayer: List<Double>
+        signalOutputLayer: List<Double>
     ): List<Double> {
         val biasCorrection = mutableListOf<Double>()
 
-        outputLayer.forEachIndexed { kIndex, outputValue ->
-            // y_k - 1, k == l
-            // y_k, k != l
+        signalOutputLayer.forEachIndexed { kIndex, outputNet ->
             biasCorrection.add(
-                if (targetValue.toInt() == kIndex) (outputValue - 1)
-                else outputValue
+                -calculateDerivativeSoftmaxFunction(
+                    signalOutputLayer[targetValue.toInt()], outputNet,
+                    signalOutputLayer, targetValue.toInt() == kIndex
+                )
             )
         }
 
@@ -226,36 +228,43 @@ class NewBackpropagation(
     /**
      * Menghitung koreksi bobot pada setiap neuron di hidden layer
      * @param targetValue as t: nilai target sesuai data input
-     * @param outputLayer as y_k: nilai aktivasi output layer dengan tipe data double
+     * @param signalOutputLayer as y_in_k: nilai signal output layer dengan tipe data double
      * @param hiddenNetLayer as z_in_j: sinyal input dari input ke hidden layer dengan tipe data double
      * @param inputLayer as x_i: nilai neuron dari input layer
-     * @return y_l * w_jl * f'(z_in_j) * x_i
+     * @return -g'(y_in_k) * f'(z_in_j) * x_i
      */
     private fun calculateWeightCorrectionHiddenInputNeuron(
         targetValue: Double,
-        outputLayer: List<Double>,
+        signalOutputLayer: List<Double>,
         hiddenNetLayer: List<Double>,
         inputLayer: List<Double>
-    ): List<List<Double>> {
-        val weightCorrection = mutableListOf<MutableList<Double>>()
+    ): List<List<List<Double>>> {
+        val weightCorrection = mutableListOf<MutableList<MutableList<Double>>>()
 
-        outputLayer.forEachIndexed { kIndex, outputValue ->
-            if (targetValue.toInt() == kIndex) {
-                hiddenNetLayer.forEachIndexed { jIndex, hiddenNet ->
-                    val hiddenRowCorrection = mutableListOf<Double>()
-                    inputLayer.forEach { inputValue ->
-                        // y_l * w_jl * f'(z_in_j) * x_i
-                        val weight = hiddenWeight[kIndex][jIndex]
-                        hiddenRowCorrection.add(
-                            outputValue * weight * calculateDerivativeSigmoidFunction(
-                                hiddenNet
-                            ) * inputValue
-                        )
-                    }
+        signalOutputLayer.forEachIndexed { kIndex, outputNet ->
+            val outputRow = mutableListOf<MutableList<Double>>()
 
-                    weightCorrection.add(hiddenRowCorrection)
+            hiddenNetLayer.forEachIndexed { jIndex, hiddenNet ->
+                val weight = hiddenWeight[kIndex][jIndex]
+                val hiddenRowCorrection = mutableListOf<Double>()
+
+                inputLayer.forEach { inputValue ->
+                    hiddenRowCorrection.add(
+                        -calculateDerivativeSoftmaxFunction(
+                            signalOutputLayer[targetValue.toInt()],
+                            outputNet,
+                            signalOutputLayer,
+                            targetValue.toInt() == kIndex
+                        ) * calculateDerivativeSigmoidFunction(
+                            hiddenNet
+                        ) * inputValue
+                    )
                 }
+
+                outputRow.add(hiddenRowCorrection)
             }
+
+            weightCorrection.add(outputRow)
         }
 
         return weightCorrection
@@ -264,31 +273,33 @@ class NewBackpropagation(
     /**
      * Menghitung koreksi bias pada setiap neuron di output layer
      * @param targetValue as t: nilai target sesuai data input
-     * @param outputLayer as y_k: nilai aktivasi output layer dengan tipe data double
+     * @param signalOutputLayer as y_in_k: nilai signal output layer dengan tipe data double
      * @param hiddenNetLayer as z_in_j: sinyal input dari input ke hidden layer dengan tipe data double
-     * @return f'(y_in_k) * f'(z_in_j)
+     * @return g'(y_in_k) * f'(z_in_j)
      */
     private fun calculateBiasCorrectionHiddenInputNeuron(
         targetValue: Double,
-        outputLayer: List<Double>,
+        signalOutputLayer: List<Double>,
         hiddenNetLayer: List<Double>
     ): List<List<Double>> {
         val biasCorrection = mutableListOf<List<Double>>()
 
-        outputLayer.forEachIndexed { kIndex, outputValue ->
+        signalOutputLayer.forEachIndexed { kIndex, outputNet ->
             val outputRowCorrection = mutableListOf<Double>()
 
-            if (targetValue.toInt() == kIndex) {
-                hiddenNetLayer.forEachIndexed { jIndex, hiddenNet ->
-                    // y_l * w_jl * f'(z_in_j)
-                    val weight = hiddenWeight[kIndex][jIndex]
-                    outputRowCorrection.add(
-                        outputValue * weight * calculateDerivativeSigmoidFunction(hiddenNet)
-                    )
-                }
-
-                biasCorrection.add(outputRowCorrection)
+            hiddenNetLayer.forEachIndexed { jIndex, hiddenNet ->
+                val weight = hiddenWeight[kIndex][jIndex]
+                outputRowCorrection.add(
+                    -calculateDerivativeSoftmaxFunction(
+                        signalOutputLayer[targetValue.toInt()],
+                        outputNet,
+                        signalOutputLayer,
+                        targetValue.toInt() == kIndex
+                    ) * calculateDerivativeSigmoidFunction(hiddenNet)
+                )
             }
+
+            biasCorrection.add(outputRowCorrection)
         }
 
         return biasCorrection
@@ -305,44 +316,52 @@ class NewBackpropagation(
     private fun getMatrixJacobian(
         weightCorrectionHiddenOutputLayer: List<List<List<Double>>>,
         biasCorrectionHiddenOutputLayer: List<List<Double>>,
-        weightCorrectionInputHiddenLayer: List<List<List<Double>>>,
+        weightCorrectionInputHiddenLayer: List<List<List<List<Double>>>>,
         biasCorrectionInputHiddenLayer: List<List<List<Double>>>
     ): List<List<Double>> {
         val matrixJ = mutableListOf<MutableList<Double>>()
 
         // add correction input ~ hidden
         weightCorrectionInputHiddenLayer.forEach { weightPerData ->
-            val matrixJRow = mutableListOf<Double>()
-            weightPerData.forEach { weightRow ->
-                weightRow.forEach { weightValue ->
-                    matrixJRow.add(weightValue)
+            weightPerData.forEach { weightCorrectionList ->
+                val matrixJRow = mutableListOf<Double>()
+                weightCorrectionList.forEach { weightRow ->
+                    weightRow.forEach { weightValue ->
+                        matrixJRow.add(weightValue)
+                    }
                 }
+                matrixJ.add(matrixJRow)
             }
-            matrixJ.add(matrixJRow)
         }
 
         // add bias correction input ~ hidden
-        matrixJ.forEachIndexed { index, matrixJRow ->
-            biasCorrectionInputHiddenLayer[index].forEachIndexed { dataIndex, biasRowPerData ->
+        matrixJ.forEach { matrixJRow ->
+            biasCorrectionInputHiddenLayer.forEach { biasRowPerData ->
                 biasRowPerData.forEach { biasRow ->
-                    matrixJRow.add(biasRow)
+                    biasRow.forEach { biasValue ->
+                        matrixJRow.add(biasValue)
+                    }
                 }
             }
         }
 
         // add weight correction hidden ~ output
-        matrixJ.forEachIndexed { index, matrixJRow ->
-            weightCorrectionHiddenOutputLayer[index].forEach { weightRow ->
-                weightRow.forEach { weightValue ->
-                    matrixJRow.add(weightValue)
+        matrixJ.forEach { matrixJRow ->
+            weightCorrectionHiddenOutputLayer.forEach { weightRowPerData ->
+                weightRowPerData.forEach { weightRow ->
+                    weightRow.forEach { weightValue ->
+                        matrixJRow.add(weightValue)
+                    }
                 }
             }
         }
 
         // add bias correction hidden ~ output
-        matrixJ.forEachIndexed { index, matrixJRow ->
-            biasCorrectionHiddenOutputLayer[index].forEach { biasRow ->
-                matrixJRow.add(biasRow)
+        matrixJ.forEach { matrixJRow ->
+            biasCorrectionHiddenOutputLayer.forEach { biasRowPerData ->
+                biasRowPerData.forEach { biasValue ->
+                    matrixJRow.add(biasValue)
+                }
             }
         }
 
@@ -370,6 +389,8 @@ class NewBackpropagation(
         outputError: List<Double>
     ): List<Double> {
         val transposedJacobian = Matrix.transposeMatrix(jacobianMatrix)
+        println("transposedJacobian shape: ${transposedJacobian.toNDArray().shape.contentToString()}")
+        println("outputError shape: ${outputError.toNDArray().shape.contentToString()}")
 
         return timesMatrixWithColumnMatrix(transposedJacobian, outputError)
     }

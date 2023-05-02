@@ -9,5 +9,6 @@ data class FeedForwardResult(
     var outputLayer: List<List<Double>>, // y
     var errorList: List<Double>, // e_p
     var errorValue: Double,
-    var accuracyValue: Double
+    var accuracyValue: Double,
+    var mse: Double,
 )
